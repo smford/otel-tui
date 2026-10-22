@@ -5,6 +5,8 @@ import (
 	"math"
 	"strings"
 	"time"
+
+	"github.com/charmbracelet/lipgloss"
 )
 
 // BarCoordinates calculates the character columns for the waterfall timing bar.
@@ -102,4 +104,24 @@ func FormatDuration(d time.Duration) string {
 		return fmt.Sprintf("%.1fms", float64(d.Milliseconds())+(float64(d%time.Millisecond)/float64(time.Millisecond)))
 	}
 	return fmt.Sprintf("%.2fs", d.Seconds())
+}
+
+// PadRight pads string s with trailing spaces until its terminal display width equals targetWidth.
+// Correctly accounts for multi-byte Unicode characters and ANSI styling.
+func PadRight(s string, targetWidth int) string {
+	w := lipgloss.Width(s)
+	if w >= targetWidth {
+		return s
+	}
+	return s + strings.Repeat(" ", targetWidth-w)
+}
+
+// PadLeft pads string s with leading spaces until its terminal display width equals targetWidth.
+// Correctly accounts for multi-byte Unicode characters and ANSI styling.
+func PadLeft(s string, targetWidth int) string {
+	w := lipgloss.Width(s)
+	if w >= targetWidth {
+		return s
+	}
+	return strings.Repeat(" ", targetWidth-w) + s
 }

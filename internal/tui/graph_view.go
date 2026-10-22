@@ -23,21 +23,37 @@ func RenderServiceGraphView(graph *store.ServiceGraph, width, height int) string
 
 	// 1. Service Nodes Table
 	lines = append(lines, lipgloss.NewStyle().Bold(true).Foreground(ColorWhite).Render("SERVICES SUMMARY:"))
-	nodeHeader := fmt.Sprintf("  %-24s %-14s %-14s %-12s %-10s",
-		"SERVICE NAME", "INBOUND CALLS", "OUTBOUND CALLS", "ERROR COUNT", "ERROR RATE")
+	nodeHeader := fmt.Sprintf("  %s %s %s %s %s",
+		PadRight("SERVICE NAME", 24),
+		PadRight("INBOUND CALLS", 15),
+		PadRight("OUTBOUND CALLS", 15),
+		PadRight("ERROR COUNT", 13),
+		PadRight("ERROR RATE", 12))
 	lines = append(lines, TableHeaderStyle.Width(width-4).Render(nodeHeader))
 
 	for _, n := range graph.Nodes {
-		svcCol := lipgloss.NewStyle().Foreground(ServiceColor(n.Name)).Bold(true).Render(n.Name)
-		errRateStr := fmt.Sprintf("%.1f%%", n.ErrorRate)
-		if n.ErrorRate > 0 {
-			errRateStr = lipgloss.NewStyle().Foreground(ColorError).Bold(true).Render(errRateStr)
-		} else {
-			errRateStr = lipgloss.NewStyle().Foreground(ColorSecondary).Render(errRateStr)
+		svcName := n.Name
+		if lipgloss.Width(svcName) > 24 {
+			svcName = svcName[:21] + "..."
 		}
+		svcCol := lipgloss.NewStyle().Foreground(ServiceColor(n.Name)).Bold(true).Render(svcName)
+		svcCell := PadRight(svcCol, 24)
 
-		row := fmt.Sprintf("  %-24s %-14d %-14d %-12d %-10s",
-			svcCol, n.InboundCalls, n.OutboundCalls, n.ErrorCount, errRateStr)
+		inboundCell := PadRight(fmt.Sprintf("%d", n.InboundCalls), 15)
+		outboundCell := PadRight(fmt.Sprintf("%d", n.OutboundCalls), 15)
+		errCountCell := PadRight(fmt.Sprintf("%d", n.ErrorCount), 13)
+
+		errRatePlain := fmt.Sprintf("%.1f%%", n.ErrorRate)
+		var errRateCell string
+		if n.ErrorRate > 0 {
+			errRateCell = lipgloss.NewStyle().Foreground(ColorError).Bold(true).Render(errRatePlain)
+		} else {
+			errRateCell = lipgloss.NewStyle().Foreground(ColorSecondary).Render(errRatePlain)
+		}
+		errRateCell = PadRight(errRateCell, 12)
+
+		row := fmt.Sprintf("  %s %s %s %s %s",
+			svcCell, inboundCell, outboundCell, errCountCell, errRateCell)
 		lines = append(lines, row)
 	}
 
@@ -49,8 +65,18 @@ func RenderServiceGraphView(graph *store.ServiceGraph, width, height int) string
 		lines = append(lines, lipgloss.NewStyle().Foreground(ColorMuted).Render("  <no cross-service calls observed yet>"))
 	} else {
 		for _, e := range graph.Edges {
-			fromCol := lipgloss.NewStyle().Foreground(ServiceColor(e.FromService)).Bold(true).Render(e.FromService)
-			toCol := lipgloss.NewStyle().Foreground(ServiceColor(e.ToService)).Bold(true).Render(e.ToService)
+			fromName := e.FromService
+			if lipgloss.Width(fromName) > 22 {
+				fromName = fromName[:19] + "..."
+			}
+			fromCol := lipgloss.NewStyle().Foreground(ServiceColor(e.FromService)).Bold(true).Render(fromName)
+			fromCell := PadRight(fromCol, 22)
+
+			toName := e.ToService
+			if lipgloss.Width(toName) > 22 {
+				toName = toName[:19] + "..."
+			}
+			toCol := lipgloss.NewStyle().Foreground(ServiceColor(e.ToService)).Bold(true).Render(toName)
 
 			statBadge := fmt.Sprintf(" %d calls │ avg %s │ p95 %s ", e.CallCount, FormatDuration(e.AvgDuration), FormatDuration(e.P95Duration))
 			var edgeStyled string
@@ -62,7 +88,7 @@ func RenderServiceGraphView(graph *store.ServiceGraph, width, height int) string
 				edgeStyled = lipgloss.NewStyle().Foreground(ColorSecondary).Render("──[" + statBadge + "]──▶ ")
 			}
 
-			lines = append(lines, fmt.Sprintf("  %s %s%s", fromCol, edgeStyled, toCol))
+			lines = append(lines, fmt.Sprintf("  %s %s%s", fromCell, edgeStyled, toCol))
 		}
 	}
 

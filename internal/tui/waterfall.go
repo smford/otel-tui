@@ -53,21 +53,24 @@ func RenderWaterfall(trace *store.Trace, selectedSpanIdx int, width, height int)
 
 	var lines []string
 
+	// Calculate available left column width for the tree hierarchy
+	availableTreeWidth := width - barWidth - 24
+	if availableTreeWidth < 20 {
+		availableTreeWidth = 20
+	}
+
 	// Column header
 	treeColHeader := "SPAN HIERARCHY"
 	timeColHeader := fmt.Sprintf("TIMELINE (%s total)", FormatDuration(trace.Duration))
-	headerLeftWidth := width - barWidth - 22
-	if headerLeftWidth < 20 {
-		headerLeftWidth = 20
-	}
-	headerLine := fmt.Sprintf("  %-*s  %s", headerLeftWidth, treeColHeader, timeColHeader)
+	headerLeft := PadRight("  "+treeColHeader, availableTreeWidth+2)
+	headerLine := headerLeft + timeColHeader
 	lines = append(lines, lipgloss.NewStyle().Bold(true).Foreground(ColorMuted).Render(headerLine))
 
 	for i := startIdx; i < endIdx; i++ {
 		s := trace.SpanTree[i]
 		isSelected := i == selectedSpanIdx
 
-		// Cursor indicator
+		// Cursor indicator (2 columns)
 		cursor := "  "
 		if isSelected {
 			cursor = "❯ "
@@ -106,10 +109,18 @@ func RenderWaterfall(trace *store.Trace, selectedSpanIdx int, width, height int)
 			n1Text = lipgloss.NewStyle().Foreground(ColorWarning).Bold(true).Render(" [N+1]")
 		}
 
-		// Span operation name
+		// Operation name: truncate safely to fit available tree width
+		maxOpWidth := availableTreeWidth - (s.Depth * 2) - lipgloss.Width(s.ServiceName) - 16
+		if maxOpWidth < 10 {
+			maxOpWidth = 10
+		}
 		opName := s.Name
-		if len(opName) > 28 {
-			opName = opName[:25] + "..."
+		if len(opName) > maxOpWidth {
+			if maxOpWidth > 3 {
+				opName = opName[:maxOpWidth-3] + "..."
+			} else {
+				opName = opName[:maxOpWidth]
+			}
 		}
 
 		// Left tree column content
@@ -133,21 +144,10 @@ func RenderWaterfall(trace *store.Trace, selectedSpanIdx int, width, height int)
 		}
 		timingInfo := fmt.Sprintf("[%s] %7s (%2d%%)", styledBar, durText, pct)
 
-		// Format line with spacing
-		availableTreeWidth := width - barWidth - 24
-		if availableTreeWidth < 20 {
-			availableTreeWidth = 20
-		}
-
-		// Strip ANSI width calculation for clean alignment
-		treeTextPlain := stripAnsi(leftContent)
-		pad := availableTreeWidth - len(treeTextPlain)
-		if pad < 1 {
-			pad = 1
-		}
-		padding := strings.Repeat(" ", pad)
-
-		rowText := fmt.Sprintf("%s%s%s%s", cursor, leftContent, padding, timingInfo)
+		// Exactly padded left column so timingInfo always starts at the same visual column
+		leftCol := cursor + leftContent
+		leftPadded := PadRight(leftCol, availableTreeWidth+2)
+		rowText := leftPadded + timingInfo
 
 		if isSelected {
 			lines = append(lines, RowSelectedStyle.Width(width).Render(rowText))
@@ -157,24 +157,4 @@ func RenderWaterfall(trace *store.Trace, selectedSpanIdx int, width, height int)
 	}
 
 	return strings.Join(lines, "\n")
-}
-
-// Simple ANSI stripper for padding calculation
-func stripAnsi(str string) string {
-	var sb strings.Builder
-	inAnsi := false
-	for _, r := range str {
-		if r == '\x1b' {
-			inAnsi = true
-			continue
-		}
-		if inAnsi {
-			if r == 'm' {
-				inAnsi = false
-			}
-			continue
-		}
-		sb.WriteRune(r)
-	}
-	return sb.String()
 }

@@ -47,8 +47,14 @@ func RenderTraceDiffView(diff *store.TraceDiff, width, height int) string {
 	lines = append(lines, "")
 
 	// Table Header
-	headerCols := fmt.Sprintf("  %-4s %-18s %-28s %-12s %-12s %-16s %-10s",
-		"DIFF", "SERVICE", "OPERATION", "BASE DUR", "TARGET DUR", "DELTA (ms / %)", "STATUS")
+	headerCols := fmt.Sprintf("  %s %s %s %s %s %s %s",
+		PadRight("DIFF", 4),
+		PadRight("SERVICE", 18),
+		PadRight("OPERATION", 28),
+		PadRight("BASE DUR", 12),
+		PadRight("TARGET DUR", 12),
+		PadRight("DELTA (ms / %)", 18),
+		PadRight("STATUS", 12))
 	lines = append(lines, TableHeaderStyle.Width(width-4).Render(headerCols))
 
 	for _, item := range diff.SpanDiffs {
@@ -107,8 +113,16 @@ func RenderTraceDiffView(diff *store.TraceDiff, width, height int) string {
 			statusText = fmt.Sprintf("%s ➔ %s", item.BaseStatus, item.TargetStatus)
 		}
 
-		rowStr := fmt.Sprintf("  %-4s %-18s %-28s %-12s %-12s %-16s %-10s",
-			diffIcon, svcText, opText, baseDurText, targetDurText, deltaCombined, statusText)
+		diffCell := PadRight(diffIcon, 4)
+		svcCell := PadRight(svcText, 18)
+		opCell := PadRight(opText, 28)
+		baseDurCell := PadRight(baseDurText, 12)
+		targetDurCell := PadRight(targetDurText, 12)
+		deltaCell := PadRight(deltaCombined, 18)
+		statusCell := PadRight(statusText, 12)
+
+		rowStr := fmt.Sprintf("  %s %s %s %s %s %s %s",
+			diffCell, svcCell, opCell, baseDurCell, targetDurCell, deltaCell, statusCell)
 
 		lines = append(lines, rowStyle.Render(rowStr))
 	}

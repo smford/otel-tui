@@ -464,8 +464,15 @@ func (m *AppModel) renderListView() string {
 	b.WriteString("\n\n")
 
 	// Table Header
-	headerCols := fmt.Sprintf("  %-6s %-10s %-20s %-28s %-10s %-6s %-16s %-8s",
-		"STAT", "TIME", "SERVICE", "OPERATION", "DURATION", "SPANS", "TRACE ID", "FLAGS")
+	headerCols := fmt.Sprintf("  %s %s %s %s %s %s %s %s",
+		PadRight("STAT", 6),
+		PadRight("TIME", 10),
+		PadRight("SERVICE", 20),
+		PadRight("OPERATION", 28),
+		PadRight("DURATION", 10),
+		PadRight("SPANS", 6),
+		PadRight("TRACE ID", 16),
+		"FLAGS")
 	b.WriteString(TableHeaderStyle.Width(m.width).Render(headerCols))
 	b.WriteString("\n")
 
@@ -528,8 +535,17 @@ func (m *AppModel) renderListView() string {
 				cursor = "❯ "
 			}
 
-			rowStr := fmt.Sprintf("%s%-6s %-10s %-20s %-28s %-10s %-6d %-16s %s",
-				cursor, statusBadge, timeStr, svcName, opName, durStr, t.SpanCount, traceIDShort, flagStr)
+			cursorCell := cursor
+			statCell := PadRight(statusBadge, 6)
+			timeCell := PadRight(timeStr, 10)
+			svcCell := PadRight(svcName, 20)
+			opCell := PadRight(opName, 28)
+			durCell := PadRight(durStr, 10)
+			spansCell := PadRight(fmt.Sprintf("%d", t.SpanCount), 6)
+			idCell := PadRight(traceIDShort, 16)
+
+			rowStr := fmt.Sprintf("%s%s %s %s %s %s %s %s %s",
+				cursorCell, statCell, timeCell, svcCell, opCell, durCell, spansCell, idCell, flagStr)
 
 			if isSelected {
 				b.WriteString(RowSelectedStyle.Width(m.width).Render(rowStr))

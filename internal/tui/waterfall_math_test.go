@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 	"unicode/utf8"
+
+	"github.com/charmbracelet/lipgloss"
 )
 
 func TestComputeBarCoordinates(t *testing.T) {
@@ -79,5 +81,24 @@ func TestFormatDuration(t *testing.T) {
 		if got != tc.expected {
 			t.Errorf("duration %v: expected %s, got %s", tc.d, tc.expected, got)
 		}
+	}
+}
+
+func TestPadRightAndLeft(t *testing.T) {
+	styled := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5555")).Bold(true).Render("✖ ERROR")
+	paddedRight := PadRight(styled, 20)
+	if lipgloss.Width(paddedRight) != 20 {
+		t.Errorf("expected visual width 20, got %d", lipgloss.Width(paddedRight))
+	}
+
+	unicodeStr := "◆ root: POST /login ●"
+	paddedRightU := PadRight(unicodeStr, 30)
+	if lipgloss.Width(paddedRightU) != 30 {
+		t.Errorf("expected visual width 30 for unicode, got %d", lipgloss.Width(paddedRightU))
+	}
+
+	paddedLeft := PadLeft("12.5ms", 10)
+	if lipgloss.Width(paddedLeft) != 10 {
+		t.Errorf("expected visual width 10, got %d", lipgloss.Width(paddedLeft))
 	}
 }
