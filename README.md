@@ -4,6 +4,8 @@
 
 No Docker containers, no Jaeger, Tempo, or Grafana setup required. Just run `otel-tui`, point your application's OpenTelemetry SDK to `localhost:4318`, and debug your traces immediately.
 
+📖 **Documentation**: [https://smford.github.io/otel-tui/](https://smford.github.io/otel-tui/)
+
 ---
 
 ## Features
