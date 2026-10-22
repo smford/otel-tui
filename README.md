@@ -1,17 +1,57 @@
 # otel-tui — Zero-Setup Terminal OpenTelemetry Viewer
 
-`otel-tui` is a single-binary, zero-CGO local OpenTelemetry collector and interactive terminal UI. It receives distributed traces and logs over standard OTLP HTTP (`:4318`) and gRPC (`:4317`) protocols directly in memory, rendering live distributed trace waterfalls, critical-path flamegraphs, service dependency graphs, trace diffing, and error diagnostics right in your terminal pane.
+> **Distributed tracing shouldn't require spinning up a cloud data center on your laptop.**
 
-No Docker containers, no Jaeger, Tempo, or Grafana setup required. Just run `otel-tui`, point your application's OpenTelemetry SDK to `localhost:4318`, and debug your traces immediately.
+`otel-tui` is a single-binary, zero-setup in-memory OpenTelemetry collector and interactive terminal viewer. It listens on standard OTLP HTTP (`:4318`) and gRPC (`:4317`) ports, captures traces and logs directly in memory, and gives you instant, keyboard-driven visibility into your distributed services—right inside your terminal pane.
+
+No Docker containers, no Jaeger, Tempo, or Grafana setup required. Just launch `otel-tui`, point your application's OpenTelemetry SDK to `localhost:4318`, and debug your traces immediately.
 
 📖 **Documentation**: [https://smford.github.io/otel-tui/](https://smford.github.io/otel-tui/)
+
+---
+
+## The Problems otel-tui Solves
+
+Distributed tracing is one of the most powerful observability tools in modern engineering, but local debugging is notoriously frustrating. Here is why `otel-tui` was built:
+
+### 1. The Heavyweight Observability Stack Trap
+* **The Problem**: To inspect OpenTelemetry traces locally, developers are usually told to spin up Docker Compose stacks containing Jaeger, Grafana Tempo, Prometheus, and an OpenTelemetry Collector daemon. These containers easily chew up 3–6 GB of RAM, spin up cooling fans, require complex YAML routing configs, and take minutes to start.
+* **The Solution**: `otel-tui` is a single static binary compiled with zero CGO dependencies. It requires **no Docker**, **no daemon**, and **no configuration**. It launches in **under 10 milliseconds** and uses **less than 20 MB of RAM**. When you're done, quit with `q` and your machine stays clean.
+
+### 2. The "Did My Spans Even Send?" Black Hole
+* **The Problem**: You just instrumented a new endpoint with the OpenTelemetry SDK. You trigger a test request, but nothing shows up in your remote APM dashboard. Is there an export delay? Was the endpoint URL wrong? Did the exporter silently fail on an unhandled error? You're left guessing in the dark.
+* **The Solution**: Live, instantaneous local verification. Start `otel-tui`, fire your request, and the trace appears on your terminal screen within microseconds. If default ports `4317` or `4318` are already taken by another tool, `otel-tui` automatically binds to the next free port and tells you immediately.
+
+### 3. Context Switching & Browser Tab Fatigue
+* **The Problem**: You write code in your terminal or IDE, but to debug latency you have to switch over to a browser window, log into a heavy web UI, navigate through multiple dropdowns and search filters, copy-paste 32-character trace IDs, and squint at cluttered web charts.
+* **The Solution**: Keep your flow state. Split a pane in your terminal: your code on the left, `otel-tui` on the right. Navigate with familiar Vim keybindings (`j`/`k`), search with `/`, switch between Waterfall and Flamegraph with `f`, and copy IDs directly to your system clipboard with `y`.
+
+### 4. Hunting Down Latency Regressions
+* **The Problem**: You make a change to an endpoint, and suddenly response time jumps from 120ms to 650ms. Finding *which* child span slowed down, *which* downstream call was added, or *why* a cache was bypassed typically requires opening two separate browser tabs and manually comparing dozens of timestamps row by row.
+* **The Solution**: Built-in **Trace Diffing** (`m` to mark a baseline trace, `d` to compare). `otel-tui` calculates the exact duration delta (`+530ms / +441%`), marks newly added spans (`+`), missing spans (`-`), and highlights status changes from `OK` to `ERROR`.
+
+### 5. Silent ORM Loops (The N+1 Query Nightmare)
+* **The Problem**: Object-Relational Mappers (ORMs) like Hibernate, Prisma, or ActiveRecord make it dangerously easy to run queries inside a loop. Instead of one batch query, your app executes 50 sequential database round trips. The application doesn't crash or throw errors, but it quietly crushes database performance.
+* **The Solution**: **Automated In-Memory N+1 Detection**. `otel-tui` continuously analyzes database spans, normalizes SQL literals (e.g. `WHERE id = ?`), and immediately slaps an amber `<N+1>` warning badge on offending spans and traces so you catch query loops before code ever reaches code review.
+
+### 6. Untangling Microservice Spaghetti
+* **The Problem**: In a distributed architecture, it's hard to keep track of which services communicate with each other, what their invocation volumes are, and where cascading failures originate.
+* **The Solution**: Real-Time **Service Topology Graph** (`S`). `otel-tui` automatically discovers call flows between services from incoming spans, generating a real-time dependency map with call counts, average latency, p95 latency, and error rates per service link.
+
+### 7. Testing Tooling Without Running Live Backends
+* **The Problem**: You want to test alerting rules, demo tracing UI features, or verify collector pipelines, but you don't have a cluster of live microservices running locally.
+* **The Solution**: Built-In **Synthetic Traffic Generator** (`--demo` or press `D`). Generates realistic multi-tier e-commerce transactions, database query loops, cache misses, and timeouts on demand.
+
+### 8. Dual-Visibility Without Breaking Team Pipelines
+* **The Problem**: Your staging or development environment already forwards traces to a centralized cloud APM (Datadog, Honeycomb, Jaeger, Tempo). Pointing your app to a local tool means your teammates lose trace visibility in the shared dashboard.
+* **The Solution**: **Transparent Relay Mode** (`--forward-to <url>`). `otel-tui` acts as a pass-through proxy: it inspects and renders spans locally in your terminal while simultaneously forwarding untouched OTLP payloads upstream.
 
 ---
 
 ## Features
 
 - **Zero-Setup & Zero-CGO**: Single portable static binary compiled with `CGO_ENABLED=0`.
-- **Automatic Port Fallback**: Automatically binds to alternate ports (e.g. `:14318`) if default ports are already occupied by another service or Docker container.
+- **Automatic Port Fallback**: Automatically binds to alternate ports (e.g. `:14318`) if default ports are already occupied.
 - **OTLP Relay / Proxy Forwarding (`--forward-to <url>`)**: Asynchronously tee and forward incoming traces/logs to an upstream collector (e.g. Datadog, Jaeger, Tempo, Honeycomb) while debugging locally.
 - **Dual OTLP Ingestion**:
   - **OTLP/HTTP** (`:4318`): `POST /v1/traces` and `POST /v1/logs` supporting both `application/x-protobuf` and `application/json` payloads, with transparent gzip decompression and CORS support.
@@ -45,7 +85,7 @@ cd otel-tui
 make build
 ```
 
-This generates `bin/otel-tui`.
+This compiles a standalone executable at `bin/otel-tui`.
 
 ### Quick Start
 
@@ -62,177 +102,47 @@ Run the collector in one pane and stream realistic multi-scenario traffic from a
 # Pane 1: Collector & TUI
 ./bin/otel-tui
 
-# Pane 2: Stream realistic multi-scenario synthetic traces
+# Pane 2: Stream realistic synthetic traces continuously
 ./bin/otel-tui demo --stream --interval 1s
 ```
-Supported scenarios: `checkout` (with N+1 query loops & Stripe timeout), `search` (Elasticsearch & Redis cache), `auth-failure` (brute force 401 & security lockout), and `background-job` (S3 upload & Kafka producer).
 
-#### Option C: Connect Your Own Application
+#### Option C: Connect Your Application
+Start `otel-tui` and point your application's OpenTelemetry SDK to `localhost:4318`:
 ```bash
 ./bin/otel-tui
 ```
-
----
-
-## Pointing Your Application to `otel-tui`
-
-Configure your application using standard OpenTelemetry environment variables:
-
-### Global Environment Variables
-
 ```bash
-# HTTP Exporter (default :4318)
+# In your application's environment:
 export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318"
-export OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf"
-
-# Or gRPC Exporter (default :4317)
-export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4317"
-export OTEL_EXPORTER_OTLP_PROTOCOL="grpc"
-```
-
-### Language SDK Configuration One-Liners
-
-#### Python
-```bash
-OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318" opentelemetry-instrument python app.py
-```
-
-#### Node.js
-```bash
-NODE_OPTIONS="--require @opentelemetry/auto-instrumentations-node/register" \
-OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318" \
-node app.js
-```
-
-#### Go
-```go
-import (
-    "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
-)
-
-exporter, err := otlptracehttp.New(ctx,
-    otlptracehttp.WithEndpoint("localhost:4318"),
-    otlptracehttp.WithInsecure(),
-)
-```
-
-#### Java
-```bash
-java -javaagent:opentelemetry-javaagent.jar \
-     -Dotel.exporter.otlp.endpoint=http://localhost:4318 \
-     -jar app.jar
 ```
 
 ---
 
-## CLI Usage
+## Keyboard Controls Cheat Sheet
 
-```
-otel-tui — Zero-Setup Terminal OpenTelemetry Viewer
-
-USAGE:
-  otel-tui [flags]
-  otel-tui demo [flags]
-
-COMMANDS:
-  demo                      Send synthetic multi-service sample traces to test the UI
-
-FLAGS:
-  --grpc-port <int>         gRPC ingestion port (default: 4317)
-  --http-port <int>         HTTP ingestion port (default: 4318)
-  --max-traces <int>        Max traces held in memory ring buffer (default: 1000)
-  --headless                Disable interactive TUI and stream trace logs to stdout
-  --json                    In headless mode, output structured JSON lines instead of colorized text
-  --replay <path.json>      Load an exported JSON trace file for offline inspection
-  --forward-to <url>        Proxy/relay incoming traces to an upstream collector (e.g. http://localhost:4319)
-  --auto-fallback           Try fallback ports if default ports are busy (default: true)
-  -h, --help                Show help information
-```
-
-### Headless CLI Mode
-
-Ideal for automated test suites or CI runners:
-
-```bash
-# Colorized human-readable streaming summary
-./bin/otel-tui --headless
-
-# Structured JSON lines (for piping into jq or file storage)
-./bin/otel-tui --headless --json | jq .
-```
-
-### Offline Replay
-
-Export any trace from the TUI by pressing `x` (saves as `trace_<id>.json`), then reload it anytime:
-
-```bash
-./bin/otel-tui --replay trace_2e95d9b6.json
-```
-
----
-
-## TUI Keyboard Navigation
-
-| Key | Description |
+| Key | Action |
 |---|---|
-| `↑` / `k` | Move cursor up |
-| `↓` / `j` | Move cursor down |
-| `PageUp` / `PageDown` | Jump 10 rows |
-| `Home` / `End` | Jump to top / bottom |
-| `Enter` | Open trace waterfall / flamegraph view |
-| `Esc` / `Backspace` | Return to trace list view |
-| `D` | Inject a realistic synthetic trace immediately (no emitter needed!) |
-| `d` | Compare / Diff trace with marked baseline or adjacent trace |
-| `m` | Mark / unmark trace as comparison baseline (`[BASE]`) |
-| `S` | Open live Service Dependency Architecture Topology map |
-| `f` | Toggle between Waterfall and stacked Flamegraph view (in detail mode) |
-| `Tab` | Toggle focus between Waterfall and Span Inspector drawer |
+| `↑` / `k`, `↓` / `j` | Move selection up / down |
+| `Enter` | Drill down into Trace Waterfall / Flamegraph |
+| `Esc` / `Backspace` | Return to Trace List view |
+| `D` | **Inject synthetic trace on-demand** |
+| `f` | Toggle between Waterfall and stacked Flamegraph |
+| `d` | **Diff selected trace** against marked baseline or previous trace |
+| `m` | **Mark / unmark baseline trace** (`[BASE]`) |
+| `S` | Open **Service Dependency Architecture Topology** map |
+| `Tab` | Switch focus between Waterfall and Span Inspector drawer |
 | `J` / `K` | Scroll Span Inspector drawer |
-| `y` | Copy selected TraceID / SpanID to clipboard (OSC 52 / pbcopy) |
+| `y` | Copy selected `TraceID` or `SpanID` to clipboard |
 | `Y` | Copy full trace JSON to clipboard |
-| `/` | Filter traces (`service:auth`, `error:true`, `>200ms`, `status:error`) |
-| `p` | Pause / resume live trace ingestion stream |
-| `c` | Clear memory buffer |
-| `x` | Export selected trace to JSON file |
-| `?` | Toggle help popup |
+| `/` | Live filter traces (`service:api`, `error:true`, `>200ms`) |
+| `p` | Pause / resume live ingestion stream |
+| `c` | Clear in-memory buffer |
+| `x` | Export trace to `trace_<id>.json` |
+| `?` | Toggle in-app help modal |
 | `q` / `Ctrl+C` | Quit |
-
----
-
-## Query Filtering Syntax
-
-In the trace list view, press `/` to filter:
-
-- **By Error Status**: `error:true`, `status:error`, or `error:false`
-- **By Service**: `service:api-gateway` or `service:payment`
-- **By Latency / Duration**: `>200ms`, `>=1s`, `<50ms`
-- **By Substring**: search trace IDs, operation names, or service names (e.g. `checkout`)
-- **Combined**: `service:payment error:true >100ms`
-
----
-
-## Testing
-
-Run the full test suite with Go's race detector:
-
-```bash
-make test
-```
-
-Unit tests cover:
-- Thread-safe bounded ring buffer and eviction
-- Out-of-order span batch assembly into complete traces
-- N+1 database query detection
-- Trace diffing and latency comparison
-- Service dependency graph aggregation
-- Proportional timing bar math across arbitrary column widths
-- OTLP HTTP (JSON & Protobuf) and gRPC trace & log receivers
-- Automatic port conflict fallback
-- Upstream proxy relay forwarding
-- Multi-service end-to-end synthetic demo ingestion
 
 ---
 
 ## License
 
-MIT
+MIT License. See [LICENSE](LICENSE) for details.
