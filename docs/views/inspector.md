@@ -4,6 +4,8 @@ The **Span Inspector Drawer** gives you deep-dive visibility into every attribut
 
 Press <kbd>Enter</kbd> or <kbd>i</kbd> on any highlighted span in the Waterfall or Flamegraph view to toggle the inspector drawer.
 
+![Span Inspector Drawer](../assets/inspector.png)
+
 ---
 
 ## Anatomy of the Inspector

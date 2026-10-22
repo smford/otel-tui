@@ -8,6 +8,8 @@ No Docker containers, no Jaeger, Tempo, or Grafana setup required. Just launch `
 
 📖 **Documentation**: [https://smford.github.io/otel-tui/](https://smford.github.io/otel-tui/)
 
+![otel-tui Live Trace Stream](docs/assets/trace-list.png)
+
 ---
 
 ## The Problems otel-tui Solves
@@ -70,6 +72,30 @@ Distributed tracing is one of the most powerful observability tools in modern en
   - **Trace Export & Offline Replay**: Save traces to JSON (`x`) and replay them offline (`--replay <file.json>`).
 - **Headless CLI Dump Mode**: Stream colorized trace summaries or structured JSON lines (`--headless --json`) to stdout for piping or CI integration.
 - **Built-in Demo Generator**: Simulate realistic multi-service traces (`api-gateway` -> `auth-service` -> `payment-service` -> `postgres-db`, `stripe-client`) with slow queries, N+1 query loops, and exceptions via `otel-tui demo`.
+
+---
+
+## Interactive Views Preview
+
+### Distributed Trace Waterfall
+Hierarchical span trees with microsecond timing alignment, critical path identification, and error highlights.
+![Distributed Trace Waterfall](docs/assets/waterfall.png)
+
+### Stacked Flamegraph View
+Press `f` to switch from waterfall to proportional stacked depth layers.
+![Stacked Flamegraph View](docs/assets/flamegraph.png)
+
+### Service Dependency Architecture Topology
+Press `S` to inspect real-time inter-service call volumes, avg/p95 latencies, and error rates.
+![Service Topology Graph](docs/assets/topology.png)
+
+### Comparative Trace Diffing
+Press `m` to mark a baseline and `d` to pinpoint latency regressions between runs.
+![Trace Comparison Diff](docs/assets/trace-diff.png)
+
+### Span Inspector Drawer
+Press `Enter` or `i` to inspect attributes, exception stack traces, and correlated logs.
+![Span Inspector Drawer](docs/assets/inspector.png)
 
 ---
 

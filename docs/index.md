@@ -36,6 +36,8 @@ flowchart LR
     end
 ```
 
+![otel-tui Live Trace Stream](assets/trace-list.png)
+
 ---
 
 ## The Problems otel-tui Solves
@@ -90,6 +92,26 @@ Distributed tracing is one of the most powerful observability tools in modern en
 | **Relay Proxy Forwarding**| `--forward-to` | Inspect traces locally without breaking your team's upstream collector pipelines. |
 | **Port Collision Handling**| *Automatic* | Gracefully binds to the next open port if `:4317` or `:4318` are in use. |
 | **Clipboard Integration** | <kbd>y</kbd> / <kbd>Y</kbd> | Copy Trace ID, Span ID, or raw JSON straight to your clipboard via OSC 52. |
+
+---
+
+## Interactive Views Preview
+
+### Distributed Trace Waterfall
+Hierarchical span trees with microsecond timing alignment, critical path identification, and error highlights.
+![Distributed Trace Waterfall](assets/waterfall.png)
+
+### Stacked Flamegraph View
+Press <kbd>f</kbd> to switch from waterfall to proportional stacked depth layers.
+![Stacked Flamegraph View](assets/flamegraph.png)
+
+### Service Dependency Architecture Topology
+Press <kbd>S</kbd> to inspect real-time inter-service call volumes, avg/p95 latencies, and error rates.
+![Service Topology Graph](assets/topology.png)
+
+### Comparative Trace Diffing
+Press <kbd>m</kbd> to mark a baseline and <kbd>d</kbd> to pinpoint latency regressions between runs.
+![Trace Comparison Diff](assets/trace-diff.png)
 
 ---
 

@@ -7,6 +7,8 @@ description: Hierarchical parent-child span tree with timing bars
 
 When you press `Enter` on any trace in the main list view, `otel-tui` opens the **Distributed Trace Waterfall**.
 
+![Distributed Trace Waterfall](../assets/waterfall.png)
+
 ```
 SPAN HIERARCHY                                      TIMELINE (100.0ms total)
 ❯ ◆ ● api-gateway: POST /api/v1/checkout [CP]        [█████████████████████████] 100.0ms (100%)

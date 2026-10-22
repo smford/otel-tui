@@ -25,6 +25,8 @@ When optimizing code or investigating regressions, developers often need to answ
 
 ## Diff Table Breakdown
 
+![Trace Comparison & Diffing](../assets/trace-diff.png)
+
 ```
 ◆ TRACE DIFF: a4d70688 vs 5e100935
   Duration: 120.0ms ➔ 650.0ms  │  Delta: +530.0ms (+441.7% SLOWER) [STATUS CHANGED]

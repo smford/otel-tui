@@ -7,6 +7,8 @@ description: Real-time architecture call map with latencies and error rates
 
 Press **`S`** (Shift+S) in the trace list view to view the live **Service Dependency Topology Graph**.
 
+![Service Dependency Architecture Topology](../assets/topology.png)
+
 ```
 ◆ SERVICE TOPOLOGY GRAPH (4 services, 3 dependency links)
 

@@ -7,6 +7,8 @@ description: Proportional multi-layer flamegraph of distributed trace executions
 
 Press **`f`** inside the trace detail view to switch between the hierarchical tree waterfall and the **Stacked Flamegraph**.
 
+![Stacked Flamegraph View](../assets/flamegraph.png)
+
 ```
 FLAMEGRAPH VIEW [f: switch to Waterfall] — Total Duration: 100.0ms
 
