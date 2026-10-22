@@ -47,15 +47,28 @@ This generates `bin/otel-tui`.
 
 ### Quick Start
 
-1. Start `otel-tui` in a terminal pane:
-   ```bash
-   ./bin/otel-tui
-   ```
+#### Option A: Zero Emitter Needed (Built-in Continuous Generator)
+If you don't have an OpenTelemetry emitter yet, run with `--demo` to automatically feed realistic continuous synthetic telemetry:
+```bash
+./bin/otel-tui --demo
+```
+*(Or press `D` anytime inside the interactive TUI to inject a new synthetic trace on demand!)*
 
-2. In another pane, generate a synthetic multi-service demo trace:
-   ```bash
-   ./bin/otel-tui demo
-   ```
+#### Option B: Standalone Continuous Emitter
+Run the collector in one pane and stream realistic multi-scenario traffic from another:
+```bash
+# Pane 1: Collector & TUI
+./bin/otel-tui
+
+# Pane 2: Stream realistic multi-scenario synthetic traces
+./bin/otel-tui demo --stream --interval 1s
+```
+Supported scenarios: `checkout` (with N+1 query loops & Stripe timeout), `search` (Elasticsearch & Redis cache), `auth-failure` (brute force 401 & security lockout), and `background-job` (S3 upload & Kafka producer).
+
+#### Option C: Connect Your Own Application
+```bash
+./bin/otel-tui
+```
 
 ---
 
@@ -166,6 +179,7 @@ Export any trace from the TUI by pressing `x` (saves as `trace_<id>.json`), then
 | `Home` / `End` | Jump to top / bottom |
 | `Enter` | Open trace waterfall / flamegraph view |
 | `Esc` / `Backspace` | Return to trace list view |
+| `D` | Inject a realistic synthetic trace immediately (no emitter needed!) |
 | `d` | Compare / Diff trace with marked baseline or adjacent trace |
 | `m` | Mark / unmark trace as comparison baseline (`[BASE]`) |
 | `S` | Open live Service Dependency Architecture Topology map |

@@ -29,6 +29,8 @@ COMMANDS:
   demo                      Send synthetic multi-service sample traces to test the UI
 
 FLAGS:
+  --demo                    Run built-in synthetic trace generator in background (no emitter needed!)
+  --demo-interval <dur>     Interval between background demo traces (default: 2s)
   --grpc-port <int>         gRPC ingestion port (default: 4317)
   --http-port <int>         HTTP ingestion port (default: 4318)
   --max-traces <int>        Max traces held in memory ring buffer (default: 1000)
@@ -40,19 +42,21 @@ FLAGS:
   -h, --help                Show help information
 
 EXAMPLES:
-  # Start local collector & launch interactive TUI
+  # Start with continuous synthetic traffic (Zero emitter needed!):
+  otel-tui --demo
+
+  # Inside the TUI, press 'D' anytime to inject sample traces on demand!
+
+  # Stream realistic multi-service synthetic traces continuously:
+  otel-tui demo --stream --interval 1s
+
+  # Start local collector & wait for your own application:
   otel-tui
 
-  # Send sample demo traces to localhost:4318
-  otel-tui demo
-
-  # Forward traces upstream while inspecting locally
+  # Forward traces upstream while inspecting locally:
   otel-tui --forward-to http://staging-collector:4318
 
-  # Stream incoming traces to stdout (ideal for CI or logging)
-  otel-tui --headless
-
-  # Inspect a previously exported trace offline
+  # Inspect a previously exported trace offline:
   otel-tui --replay trace_3a4b5c6d.json
 `)
 }
@@ -64,6 +68,8 @@ func main() {
 	}
 
 	fs := flag.NewFlagSet("otel-tui", flag.ExitOnError)
+	demoMode := fs.Bool("demo", false, "Continuously generate synthetic distributed traces in the background")
+	demoInterval := fs.Duration("demo-interval", 2*time.Second, "Interval between synthetic background traces when --demo is active")
 	grpcPort := fs.Int("grpc-port", 4317, "gRPC intake port")
 	httpPort := fs.Int("http-port", 4318, "HTTP intake port")
 	maxTraces := fs.Int("max-traces", 1000, "Maximum number of traces in bounded buffer")
@@ -83,6 +89,23 @@ func main() {
 	}
 
 	st := store.NewStore(*maxTraces)
+
+	// If --demo is requested, run continuous synthetic trace generator in background
+	if *demoMode {
+		go func() {
+			time.Sleep(300 * time.Millisecond)
+			ticker := time.NewTicker(*demoInterval)
+			defer ticker.Stop()
+
+			// Immediately inject one trace
+			demo.InjectSyntheticTrace(st, demo.ScenarioCheckout)
+
+			for range ticker.C {
+				sc := demo.RandomScenario()
+				demo.InjectSyntheticTrace(st, sc)
+			}
+		}()
+	}
 
 	// If replay file is provided, load it
 	if *replayFile != "" {
@@ -220,24 +243,69 @@ func printHeadlessTrace(tr *store.Trace) {
 func runDemo(args []string) {
 	fs := flag.NewFlagSet("demo", flag.ExitOnError)
 	target := fs.String("target", "http://localhost:4318", "Target HTTP OTLP base URL")
-	count := fs.Int("count", 1, "Number of sample traces to generate")
-	interval := fs.Duration("interval", 500*time.Millisecond, "Interval between traces if count > 1")
+	scenario := fs.String("scenario", "all", "Scenario to emit: all, checkout, search, auth-failure, background-job")
+	stream := fs.Bool("stream", false, "Continuously stream synthetic traces until interrupted")
+	count := fs.Int("count", 1, "Number of sample traces to generate (ignored if --stream)")
+	interval := fs.Duration("interval", 1*time.Second, "Interval between emitted traces")
 	_ = fs.Parse(args)
 
-	fmt.Printf("Generating %d sample distributed trace(s) -> %s\n", *count, *target)
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
+	selectScenario := func(idx int) demo.Scenario {
+		switch *scenario {
+		case "checkout":
+			return demo.ScenarioCheckout
+		case "search":
+			return demo.ScenarioProductSearch
+		case "auth-failure", "auth":
+			return demo.ScenarioAuthFailure
+		case "background-job", "job", "worker":
+			return demo.ScenarioBackgroundJob
+		default:
+			// Cycle through all scenarios
+			return demo.AllScenarios[idx%len(demo.AllScenarios)]
+		}
+	}
+
+	if *stream {
+		fmt.Printf("Streaming synthetic OpenTelemetry events to %s (interval: %v, Ctrl+C to stop)...\n", *target, *interval)
+		idx := 0
+		ticker := time.NewTicker(*interval)
+		defer ticker.Stop()
+
+		for {
+			sc := selectScenario(idx)
+			tid, err := demo.SendDemoScenario(*target, sc)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to emit %s trace: %v\n", sc, err)
+			} else {
+				fmt.Printf("[%s] Emitted scenario '%s' (trace_id: %s)\n", time.Now().Format("15:04:05"), sc, tid)
+			}
+			idx++
+
+			select {
+			case <-sigChan:
+				fmt.Println("\nStopped synthetic trace stream.")
+				return
+			case <-ticker.C:
+			}
+		}
+	}
+
+	fmt.Printf("Emitting %d synthetic distributed trace(s) -> %s\n", *count, *target)
 	for i := 1; i <= *count; i++ {
-		traceID, err := demo.SendDemoTraces(*target)
+		sc := selectScenario(i - 1)
+		tid, err := demo.SendDemoScenario(*target, sc)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[%d/%d] Failed to send demo trace: %v\n", i, *count, err)
+			fmt.Fprintf(os.Stderr, "[%d/%d] Failed to emit trace: %v\n", i, *count, err)
 			os.Exit(1)
 		}
-		fmt.Printf("[%d/%d] Sent trace %s (api-gateway -> auth-service -> payment-service -> postgres-db, stripe-client)\n",
-			i, *count, traceID)
+		fmt.Printf("[%d/%d] Emitted scenario '%s' (trace_id: %s)\n", i, *count, sc, tid)
 
 		if i < *count && *interval > 0 {
 			time.Sleep(*interval)
 		}
 	}
-	fmt.Println("Demo trace generation complete.")
+	fmt.Println("Synthetic trace emission complete.")
 }

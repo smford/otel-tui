@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"otel-tui/internal/demo"
 	"otel-tui/internal/store"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -283,6 +284,11 @@ func (m *AppModel) handleListKeys(msg tea.KeyMsg) {
 	case "S":
 		m.activeGraph = m.store.BuildServiceGraph()
 		m.viewMode = ViewServiceGraph
+	case "D":
+		sc := demo.RandomScenario()
+		tid := demo.InjectSyntheticTrace(m.store, sc)
+		m.refreshTraces()
+		m.setStatus(fmt.Sprintf("Injected %s trace (%s)", sc, tid[:8]), 3*time.Second)
 	case "y":
 		if len(m.traces) > 0 && m.selectedListIdx < len(m.traces) {
 			tid := m.traces[m.selectedListIdx].TraceID
@@ -541,6 +547,7 @@ func (m *AppModel) renderListView() string {
 	// Footer help bar
 	footer := m.renderFooterHelp([]keyHelp{
 		{"Enter", "Waterfall"},
+		{"D", "Inject Synthetic Trace"},
 		{"d", "Diff"},
 		{"m", "Mark Base"},
 		{"S", "Topology"},
@@ -710,6 +717,7 @@ func (m *AppModel) renderHelpView() string {
     J / K             Scroll Span Inspector drawer up / down
 
   NEW FEATURES & ACTIONS:
+    D                 Inject a realistic synthetic trace immediately (no emitter needed!)
     f                 Toggle between Waterfall and stacked Flamegraph view
     d                 Diff selected trace against marked baseline or adjacent trace
     m                 Mark / unmark baseline trace for comparison
